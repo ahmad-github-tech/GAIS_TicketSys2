@@ -18,16 +18,20 @@ This project is a full-stack application with a **React (Vite) frontend** and a 
    - Go to `File -> Import...`.
    - Select `Maven -> Existing Maven Projects`.
    - Browse to the root of this project and click `Finish`.
-3. **Build Frontend**:
+3. **Troubleshooting "Main Type not found" or Files Missing**:
+   - **Refresh**: Right-click the project name in Package Explorer and select **Refresh** (F5).
+   - **Maven Update**: Right-click project -> **Maven -> Update Project...** -> Check **"Force Update of Snapshots/Releases"** -> Click **OK**.
+   - **Source Folders**: If `src/main/java` is not showing as a source folder, right-click project -> **Properties -> Java Build Path -> Source tab**. Add `src/main/java` and `src/main/resources` if they are not listed.
+4. **Build Frontend**:
    - The `pom.xml` is configured with the `frontend-maven-plugin`.
-   - Running `mvn clean install` will automatically:
-     - Install Node.js and NPM locally (in the target folder).
-     - Run `npm install` to get frontend dependencies.
-     - Run `npm run build` to compile the React app.
-     - Copy the compiled React app (`dist/`) into `src/main/resources/static`, making it accessible via the Spring Boot server.
-4. **Run Backend**:
+   - Running `mvn clean install` from the command line or within STS (Run As -> Maven install) will automatically:
+     - Install Node.js and NPM locally.
+     - Run `npm install` and `npm run build`.
+     - Copy the compiled React app into `src/main/resources/static`.
+5. **Run Backend**:
    - Right-click the project in STS.
-   - Select `Run As -> Spring Boot App`.
+   - Select **Run As -> Spring Boot App**.
+   - If you still don't see "Spring Boot App", right-click `SupportFlowApplication.java` directly and select **Run As -> Java Application**.
    - The application will be available at `http://localhost:8080`.
 
 ## Database
