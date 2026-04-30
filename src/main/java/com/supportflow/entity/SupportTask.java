@@ -18,9 +18,9 @@ public class SupportTask {
     private String projectId;
     private String supportLevel;
     private String priority;
-    private String generationDate;
-    private String responseDate;
-    private String closureDate;
+    private LocalDateTime generationDate;
+    private LocalDateTime responseDate;
+    private LocalDateTime closureDate;
     private String status;
     private boolean userIntimated;
     private String description;
@@ -44,14 +44,14 @@ public class SupportTask {
     public String getPriority() { return priority; }
     public void setPriority(String priority) { this.priority = priority; }
 
-    public String getGenerationDate() { return generationDate; }
-    public void setGenerationDate(String generationDate) { this.generationDate = generationDate; }
+    public LocalDateTime getGenerationDate() { return generationDate; }
+    public void setGenerationDate(LocalDateTime generationDate) { this.generationDate = generationDate; }
 
-    public String getResponseDate() { return responseDate; }
-    public void setResponseDate(String responseDate) { this.responseDate = responseDate; }
+    public LocalDateTime getResponseDate() { return responseDate; }
+    public void setResponseDate(LocalDateTime responseDate) { this.responseDate = responseDate; }
 
-    public String getClosureDate() { return closureDate; }
-    public void setClosureDate(String closureDate) { this.closureDate = closureDate; }
+    public LocalDateTime getClosureDate() { return closureDate; }
+    public void setClosureDate(LocalDateTime closureDate) { this.closureDate = closureDate; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -70,4 +70,11 @@ public class SupportTask {
 
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    @jakarta.persistence.PrePersist
+    protected void onCreate() {
+        if (this.generationDate == null) {
+            this.generationDate = LocalDateTime.now();
+        }
+    }
 }
