@@ -43,6 +43,26 @@ I have pre-built the frontend for you and combined it with the backend. You do *
 
 ---
 
+## Fixing "Blank Page" or 404 Error
+
+If you see a blank page or a 404 error (e.g., `index.js not found`), follow these steps to reset your IDE:
+
+1. **Delete Old Files**:
+   - I have deleted `DashboardController.java` because it was conflicting with the React frontend.
+   - You may still have old templates in `src/main/resources/templates/`. You can delete them.
+
+2. **Clean and Refresh STS**:
+   - Right-click the project name in STS.
+   - Select **Maven -> Update Project...** (Check "Force Update of Snapshots/Releases").
+   - Select **Project -> Clean...** from the top menu, then click **Clean**.
+   - Right-click the project and select **Refresh** (F5).
+
+3. **Run Application**:
+   - Run `SupportFlowApplication.java` again.
+   - Access **http://localhost:8080**.
+
+---
+
 ## Technical Details (For Developers)
 
 ## Database details
