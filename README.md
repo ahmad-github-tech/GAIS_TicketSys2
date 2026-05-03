@@ -45,7 +45,7 @@ I have pre-built the frontend for you and combined it with the backend. You do *
 
 ## Technical Details (For Developers)
 
-## Database
+## Database details
 
 Uses **H2 In-Memory Database** by default.
 - H2 Console: `http://localhost:8080/h2-console`
