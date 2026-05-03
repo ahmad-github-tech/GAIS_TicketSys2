@@ -162,9 +162,23 @@ export default function App() {
     const currentTasks = projectFilteredTasks;
     const closedTasks = currentTasks.filter(t => t.closureDate && (t.status === 'Closed' || t.status === 'Resolved'));
     
-    const mttrResp = currentTasks.reduce((acc, t) => acc + differenceInMinutes(parseISO(t.responseDate), parseISO(t.generationDate)), 0) / (currentTasks.length || 1);
+    const mttrResp = currentTasks.reduce((acc, t) => {
+      if (!t.responseDate || !t.generationDate) return acc;
+      try {
+        return acc + differenceInMinutes(parseISO(t.responseDate), parseISO(t.generationDate));
+      } catch (e) {
+        return acc;
+      }
+    }, 0) / (currentTasks.filter(t => t.responseDate).length || 1);
     
-    const mttrReso = closedTasks.reduce((acc, t) => acc + differenceInMinutes(parseISO(t.closureDate!), parseISO(t.generationDate)), 0) / (closedTasks.length || 1);
+    const mttrReso = closedTasks.reduce((acc, t) => {
+      if (!t.closureDate || !t.generationDate) return acc;
+      try {
+        return acc + differenceInMinutes(parseISO(t.closureDate!), parseISO(t.generationDate));
+      } catch (e) {
+        return acc;
+      }
+    }, 0) / (closedTasks.length || 1);
     
     const closedCount = currentTasks.filter(t => t.status === 'Closed').length;
     const intimatedCount = currentTasks.filter(t => t.status === 'Closed' && t.userIntimated).length;
@@ -501,9 +515,9 @@ export default function App() {
   };
 
   const filteredTasks = projectFilteredTasks.filter(t => 
-    t.ticketId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    t.solution.toLowerCase().includes(searchQuery.toLowerCase())
+    (t.ticketId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (t.solution || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -861,12 +875,12 @@ export default function App() {
                   />
                   <KPICard 
                     label="Resp. MTTR" 
-                    value={formatDuration(kpis.mttrResp * 60000)} 
+                    value={formatDuration(kpis.mttrResp)} 
                     color="text-blue-400" 
                   />
                   <KPICard 
                     label="Reso. MTTR" 
-                    value={formatDuration(kpis.mttrReso * 60000)} 
+                    value={formatDuration(kpis.mttrReso)} 
                     color="text-indigo-400" 
                   />
                   <KPICard 
@@ -1236,10 +1250,10 @@ export default function App() {
                                 </div>
                               </td>
                               <td className="px-4 py-4 text-slate-500 text-xs">
-                                {format(parseISO(task.generationDate), 'MMM d, p')}
+                                {task.generationDate ? format(parseISO(task.generationDate), 'MMM d, p') : '-'}
                               </td>
                               <td className="px-4 py-4 text-slate-500 text-xs">
-                                {format(parseISO(task.responseDate), 'MMM d, p')}
+                                {task.responseDate ? format(parseISO(task.responseDate), 'MMM d, p') : '-'}
                               </td>
                               <td className="px-4 py-4 text-slate-500 text-xs">
                                 {task.closureDate ? format(parseISO(task.closureDate), 'MMM d, p') : '-'}
@@ -1833,16 +1847,16 @@ export default function App() {
                                       ? "bg-amber-500/10 border-amber-500/50 text-amber-500" 
                                       : "bg-slate-900 border-slate-800 text-blue-400"
                                   )}>
-                                    {user.charAt(0)}
+                                    {user ? user.charAt(0) : '?'}
                                   </div>
                                   <div className="flex flex-col">
                                     <span className={cn(
                                       "font-bold transition-colors",
                                       editingEmployee?.originalName === user ? "text-amber-400" : "text-slate-200"
                                     )}>
-                                      {user.split(' [')[0]}
+                                      {(user || '').split(' [')[0]}
                                     </span>
-                                    {user.includes('[') && (
+                                    {user && user.includes('[') && (
                                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
                                         {user.split('[')[1]?.replace(']', '')}
                                       </span>
