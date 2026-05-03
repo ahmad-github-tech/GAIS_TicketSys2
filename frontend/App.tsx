@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -62,7 +62,51 @@ const MOCK_TASKS: SupportTask[] = [
   })
 ];
 
+// --- Error Boundary ---
+class ErrorBoundary extends React.Component<any, any> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError(_: any) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if ((this as any).state.hasError) {
+      return (
+        <div className="h-screen w-full flex items-center justify-center bg-slate-950 text-slate-200 p-8">
+          <div className="max-w-md w-full bg-slate-900 border border-red-500/20 rounded-2xl p-8 text-center space-y-4">
+            <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500">
+              <AlertCircle className="w-8 h-8" />
+            </div>
+            <h2 className="text-xl font-bold">Something went wrong</h2>
+            <p className="text-sm text-slate-400">The application encountered an unexpected error. Please try refreshing the page.</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="btn-primary w-full"
+            >
+              Reload Application
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return (this as any).props.children;
+  }
+}
+
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
+
+function MainApp() {
   const [tasks, setTasks] = useState<SupportTask[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'analytics' | 'workbook' | 'settings' | 'mapping-details'>('analytics');
@@ -151,28 +195,29 @@ export default function App() {
 
   // --- Filtered Tasks ---
   const projectFilteredTasks = useMemo(() => {
-    return tasks.filter(t => 
-      (selectedProject === 'All' || t.projectId === selectedProject) &&
+    const safeTasks = Array.isArray(tasks) ? tasks : [];
+    return safeTasks.filter(t => 
+      t && (selectedProject === 'All' || t.projectId === selectedProject) &&
       (selectedEmployee === 'All' || t.assignedTo === selectedEmployee)
     );
   }, [tasks, selectedProject, selectedEmployee]);
 
   // --- KPI Calculations ---
   const kpis = useMemo(() => {
-    const currentTasks = projectFilteredTasks;
-    const closedTasks = currentTasks.filter(t => t.closureDate && (t.status === 'Closed' || t.status === 'Resolved'));
+    const currentTasks = Array.isArray(projectFilteredTasks) ? projectFilteredTasks.filter(Boolean) : [];
+    const closedTasks = currentTasks.filter(t => t && t.closureDate && (t.status === 'Closed' || t.status === 'Resolved'));
     
     const mttrResp = currentTasks.reduce((acc, t) => {
-      if (!t.responseDate || !t.generationDate) return acc;
+      if (!t || !t.responseDate || !t.generationDate) return acc;
       try {
         return acc + differenceInMinutes(parseISO(t.responseDate), parseISO(t.generationDate));
       } catch (e) {
         return acc;
       }
-    }, 0) / (currentTasks.filter(t => t.responseDate).length || 1);
+    }, 0) / (currentTasks.filter(t => t && t.responseDate).length || 1);
     
     const mttrReso = closedTasks.reduce((acc, t) => {
-      if (!t.closureDate || !t.generationDate) return acc;
+      if (!t || !t.closureDate || !t.generationDate) return acc;
       try {
         return acc + differenceInMinutes(parseISO(t.closureDate!), parseISO(t.generationDate));
       } catch (e) {
@@ -180,8 +225,8 @@ export default function App() {
       }
     }, 0) / (closedTasks.length || 1);
     
-    const closedCount = currentTasks.filter(t => t.status === 'Closed').length;
-    const intimatedCount = currentTasks.filter(t => t.status === 'Closed' && t.userIntimated).length;
+    const closedCount = currentTasks.filter(t => t && t.status === 'Closed').length;
+    const intimatedCount = currentTasks.filter(t => t && t.status === 'Closed' && t.userIntimated).length;
     const compliance = closedCount > 0 ? (intimatedCount / closedCount) * 100 : 0;
 
     return {
@@ -189,16 +234,18 @@ export default function App() {
       mttrReso: Math.round(mttrReso),
       compliance: Math.round(compliance),
       total: currentTasks.length,
-      active: currentTasks.filter(t => t.status !== 'Closed').length
+      active: currentTasks.filter(t => t && t.status !== 'Closed').length
     };
   }, [projectFilteredTasks]);
 
-  const currentConfig = projectConfigs.find(c => c.projectId === configSelectedProject)!;
+  const currentConfig = projectConfigs.find(c => c.projectId === configSelectedProject) || projectConfigs[0];
   const configPIndex = projectConfigs.findIndex(c => c.projectId === configSelectedProject);
 
   React.useEffect(() => {
-    setTempProjectSlas(currentConfig.slas);
-  }, [configSelectedProject]);
+    if (currentConfig) {
+      setTempProjectSlas(currentConfig.slas);
+    }
+  }, [configSelectedProject, currentConfig]);
 
   // --- Chart Data ---
   const charts = useMemo(() => {
@@ -220,22 +267,27 @@ export default function App() {
     // Priority Pie
     const priorityData = Object.keys(PRIORITY_COLORS).map(p => ({
       name: p,
-      value: distributionTasks.filter(t => t.priority === p).length,
+      value: distributionTasks.filter(t => t && t.priority === p).length,
       color: PRIORITY_COLORS[p as Priority]
     }));
 
     // Support Level Bar
     const levelData = ['L1', 'L2', 'L3', 'L4'].map(l => ({
       name: l,
-      count: distributionTasks.filter(t => t.supportLevel === l).length,
+      count: distributionTasks.filter(t => t && t.supportLevel === l).length,
       total: distributionTasks.length
     }));
 
     // Hours Consumed per Support Level
     const consumptionData = ['L1', 'L2', 'L3', 'L4'].map(l => {
-      const levelTasks = distributionTasks.filter(t => t.supportLevel === l && t.closureDate);
+      const levelTasks = distributionTasks.filter(t => t && t.supportLevel === l && t.closureDate);
       const totalMinutes = levelTasks.reduce((sum, t) => {
-        return sum + differenceInMinutes(parseISO(t.closureDate!), parseISO(t.generationDate));
+        if (!t || !t.closureDate || !t.generationDate) return sum;
+        try {
+          return sum + differenceInMinutes(parseISO(t.closureDate), parseISO(t.generationDate));
+        } catch (e) {
+          return sum;
+        }
       }, 0);
       return {
         name: l,
@@ -246,6 +298,7 @@ export default function App() {
 
     // Top 5 Issues
     const issueCounts = distributionTasks.reduce((acc, t) => {
+      if (!t || !t.description) return acc;
       acc[t.description] = (acc[t.description] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -515,9 +568,11 @@ export default function App() {
   };
 
   const filteredTasks = projectFilteredTasks.filter(t => 
-    (t.ticketId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (t.solution || '').toLowerCase().includes(searchQuery.toLowerCase())
+    t && (
+      (t.ticketId || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.solution || '').toLowerCase().includes(searchQuery.toLowerCase())
+    )
   );
 
   return (
@@ -913,7 +968,7 @@ export default function App() {
                       ))}
                     </div>
                   </div>
-                  <ResponsiveContainer width="100%" height="85%">
+                  <ResponsiveContainer width="100%" height="85%" minWidth={0} minHeight={0}>
                     <LineChart data={charts.trendData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="name" stroke="#64748b" fontSize={11} tickLine={false} axisLine={false} />
@@ -950,7 +1005,7 @@ export default function App() {
                     </div>
                     <div className="flex flex-grow items-center justify-around">
                       <div className="w-32 h-32 relative">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <PieChart>
                             <Pie
                               data={charts.priorityData}
@@ -1279,7 +1334,7 @@ export default function App() {
                                     </span>
                                     {isBreached && (
                                       <span className="text-[10px] text-red-400 font-mono">
-                                        +{formatDuration(delayMin * 60000)}
+                                        +{formatDuration(delayMin)}
                                       </span>
                                     )}
                                   </div>
@@ -1832,7 +1887,7 @@ export default function App() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-800/30">
-                        {Array.from(new Set(projectConfigs.flatMap(c => c.employees))).map((user: string) => {
+                        {Array.from(new Set(projectConfigs.flatMap(c => c.employees))).filter(u => typeof u === 'string' && u).map((user: string) => {
                           const userProjects = projectConfigs.filter(c => c.employees.includes(user)).map(c => c.projectId);
                           return (
                             <tr key={user} className={cn(
@@ -1854,11 +1909,11 @@ export default function App() {
                                       "font-bold transition-colors",
                                       editingEmployee?.originalName === user ? "text-amber-400" : "text-slate-200"
                                     )}>
-                                      {(user || '').split(' [')[0]}
+                                      {((user as any) || '').toString().split(' [')[0]}
                                     </span>
-                                    {user && user.includes('[') && (
+                                    {user && (user as any).toString().includes('[') && (
                                       <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                        {user.split('[')[1]?.replace(']', '')}
+                                        {(user as any).toString().split('[')[1]?.replace(']', '')}
                                       </span>
                                     )}
                                   </div>
