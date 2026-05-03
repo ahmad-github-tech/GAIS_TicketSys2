@@ -8,7 +8,7 @@ export type Priority = 'P1' | 'P2' | 'P3' | 'P4';
 export type TaskStatus = 'Open' | 'In-Progress' | 'Hold' | 'Resolved' | 'Closed';
 
 export interface SupportTask {
-  id: string; // Internal ID
+  id: number | string; // Internal ID
   ticketId: string; // Human readable ID (e.g. INC-1001)
   projectId: string;
   supportLevel: SupportLevel;

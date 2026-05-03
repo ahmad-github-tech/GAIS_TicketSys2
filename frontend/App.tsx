@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -63,7 +63,8 @@ const MOCK_TASKS: SupportTask[] = [
 ];
 
 export default function App() {
-  const [tasks, setTasks] = useState<SupportTask[]>(MOCK_TASKS);
+  const [tasks, setTasks] = useState<SupportTask[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'analytics' | 'workbook' | 'settings' | 'mapping-details'>('analytics');
   const [trendPeriod, setTrendPeriod] = useState<'weekly' | 'monthly' | 'quarterly'>('weekly');
   const [searchQuery, setSearchQuery] = useState('');
@@ -89,6 +90,25 @@ export default function App() {
   const [tempProjectSlas, setTempProjectSlas] = useState<ProjectConfig['slas']>(
     (projectConfigs.find(c => c.projectId === configSelectedProject) || projectConfigs[0]).slas
   );
+
+  useEffect(() => {
+    fetchTasks();
+  }, []);
+
+  const fetchTasks = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/tasks');
+      if (response.ok) {
+        const data = await response.json();
+        setTasks(data);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const [configChanges, setConfigChanges] = useState<{
     id: string;
@@ -294,62 +314,64 @@ export default function App() {
   }, [projectFilteredTasks, trendPeriod]);
 
   // --- Handlers ---
-  const handleSaveTask = (e: React.FormEvent) => {
+  const handleSaveTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingTask) {
-      setTasks(tasks.map(t => t.id === editingTask.id ? {
-        ...editingTask,
-        ticketId: formData.ticketId || t.ticketId,
-        projectId: formData.projectId || t.projectId,
-        supportLevel: formData.supportLevel as SupportLevel,
-        priority: formData.priority as Priority,
-        generationDate: formData.generationDate!,
-        responseDate: formData.responseDate!,
-        closureDate: formData.closureDate || null,
-        status: formData.status as TaskStatus,
-        userIntimated: formData.userIntimated || false,
-        description: formData.description || '',
-        solution: formData.solution || '',
-        remarks: formData.remarks || '',
-        assignedTo: formData.assignedTo || t.assignedTo,
-      } as SupportTask : t));
-      setEditingTask(null);
-    } else {
-      const newTask: SupportTask = {
-        id: Math.random().toString(36).substr(2, 9),
-        ticketId: formData.ticketId || `INC-${1000 + tasks.length}`,
-        projectId: formData.projectId!,
-        supportLevel: formData.supportLevel as SupportLevel,
-        priority: formData.priority as Priority,
-        generationDate: formData.generationDate!,
-        responseDate: formData.responseDate!,
-        closureDate: formData.closureDate || null,
-        status: formData.status as TaskStatus,
-        userIntimated: formData.userIntimated || false,
-        description: formData.description || '',
-        solution: formData.solution || '',
-        remarks: formData.remarks || '',
-        assignedTo: formData.assignedTo || currentUser,
-      };
-      setTasks([newTask, ...tasks]);
+    try {
+      if (editingTask) {
+        const response = await fetch(`/api/tasks/${editingTask.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            status: formData.status,
+            solution: formData.solution,
+            remarks: formData.remarks
+          }),
+        });
+        if (response.ok) {
+          const updated = await response.json();
+          setTasks(tasks.map(t => t.id === editingTask.id ? updated : t));
+          setEditingTask(null);
+        }
+      } else {
+        const response = await fetch('/api/tasks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: formData.ticketId,
+            projectId: formData.projectId,
+            supportLevel: formData.supportLevel,
+            priority: formData.priority,
+            description: formData.description,
+            assignedTo: formData.assignedTo,
+            status: formData.status,
+            generationDate: formData.generationDate ? parseISO(formData.generationDate).toISOString() : null
+          }),
+        });
+        if (response.ok) {
+          const created = await response.json();
+          setTasks([created, ...tasks]);
+        }
+      }
+      
+      // Reset form
+      setFormData({
+        ticketId: '',
+        projectId: PROJECTS[0],
+        supportLevel: 'L1',
+        priority: 'P3',
+        status: 'Open',
+        generationDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        responseDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+        closureDate: '',
+        userIntimated: false,
+        description: '',
+        solution: '',
+        remarks: '',
+        assignedTo: currentUser,
+      });
+    } catch (error) {
+      console.error('Error saving task:', error);
     }
-    
-    // Reset form
-    setFormData({
-      ticketId: '',
-      projectId: PROJECTS[0],
-      supportLevel: 'L1',
-      priority: 'P3',
-      status: 'Open',
-      generationDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      responseDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
-      closureDate: '',
-      userIntimated: false,
-      description: '',
-      solution: '',
-      remarks: '',
-      assignedTo: currentUser,
-    });
   };
 
   const [confirmModal, setConfirmModal] = useState<{
@@ -486,6 +508,14 @@ export default function App() {
 
   return (
     <div className="flex h-screen overflow-hidden text-slate-200">
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 backdrop-blur-sm">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-blue-500 font-bold animate-pulse">Syncing with Backend...</p>
+          </div>
+        </div>
+      )}
       {/* Sidebar Form */}
       <motion.aside 
         initial={false}

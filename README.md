@@ -27,16 +27,23 @@ This means STS doesn't realize `src/main/java` contains your code.
 ### 3. Missing Getters/Setters
 I have removed the Lombok dependency and added explicit Getters and Setters to `SupportTask.java` to ensure compatibility with all IDEs without needing extra plugins.
 
-## How to Run
+## Simplest Way to Run (Recommended)
 
-1. **Backend**:
-   - Right-click `SupportFlowApplication.java` inside `src/main/java/com/supportflow`.
-   - Select **Run As -> Java Application** (or Spring Boot App).
-2. **Frontend**:
-   - Open a terminal in the project root.
-   - Run `npm install`.
-   - Run `npm run dev`.
-   - Access at `http://localhost:3000`.
+I have pre-built the frontend for you and combined it with the backend. You do **not** need to install Node.js or run any terminal commands.
+
+1. **In STS**:
+   - Right-click the project.
+   - Select **Refresh** (or press F5).
+   - Right-click `SupportFlowApplication.java`.
+   - Select **Run As -> Java Application**.
+
+2. **In Browser**:
+   - Open **http://localhost:8080**.
+   - Your application is now running entirely on this single port.
+
+---
+
+## Technical Details (For Developers)
 
 ## Database
 
