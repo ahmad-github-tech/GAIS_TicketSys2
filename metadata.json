@@ -1,6 +1,6 @@
 {
   "name": "SupportFlow IT Support Task Manager",
-  "description": "A high-performance IT Support Task Management application featuring real-time KPI tracking, SLA analytics, and searchable task logs in a clean corporate dark-mode interface.",
+  "description": "A Java Spring Boot IT Support Task Management application featuring real-time KPI tracking, SLA analytics, and searchable task logs with a Thymeleaf-based corporate dashboard.",
   "requestFramePermissions": [],
   "majorCapabilities": []
 }

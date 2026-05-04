@@ -1,6 +1,6 @@
 package com.supportflow.repository;
 
-import com.supportflow.entity.SupportTask;
+import com.supportflow.model.SupportTask;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
